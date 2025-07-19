@@ -26,8 +26,15 @@ public class GenrateGrid : MonoBehaviour
 
         CalculateGridDimensions();
         CalculateStartPosition();
+       // CreateGrid();
+      //  AdjustCameraToFitGrid();
+    }
+
+    public void PlayGame()
+    {
         CreateGrid();
         AdjustCameraToFitGrid();
+        gameManager.StartCoroutine(gameManager.StartGameAfterPreview());
     }
 
     private void CalculateGridDimensions()

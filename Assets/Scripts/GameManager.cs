@@ -29,10 +29,10 @@ public class GameManager : MonoBehaviour
     private void Start()
     {
         currentState = GameState.Preview;
-        StartCoroutine(StartGameAfterPreview());
+       // StartCoroutine(StartGameAfterPreview());
     }
 
-    private IEnumerator StartGameAfterPreview()
+    public IEnumerator StartGameAfterPreview()
     {
         yield return new WaitForSeconds(previewTime);
         currentState = GameState.WaitingForFirst;
@@ -98,6 +98,9 @@ public class GameManager : MonoBehaviour
             Debug.Log($"Match check - First card ID: {firstCard.ShapeId}, Second card ID: {secondCard.ShapeId}, Is Match: {isMatch}");
         }
 
+        // Update score before processing the match result
+        ScoreHandler.Instance.ProcessMatchAttempt(isMatch);
+
         if (isMatch)
         {
             Debug.Log("Match found! Destroying cards...");
@@ -146,6 +149,7 @@ public class GameManager : MonoBehaviour
         totalPairs = pairs;
         matchesFound = 0;
         currentState = GameState.Preview;
+        ScoreHandler.Instance.ResetScore(); // Reset score when starting new game
         Debug.Log($"Game initialized with {pairs} pairs");
     }
 
