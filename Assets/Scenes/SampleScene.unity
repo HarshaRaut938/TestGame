@@ -173,6 +173,89 @@ MonoBehaviour:
   p_cardWidth: 1
   p_cardHeight: 1
   gameManager: {fileID: 1332212515}
+--- !u!1 &100817637
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 100817640}
+  - component: {fileID: 100817639}
+  - component: {fileID: 100817638}
+  m_Layer: 0
+  m_Name: GameObject
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &100817638
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 100817637}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9a5a333c5abf96847b81f85190ed5486, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  cardFlipSound: CardFlip
+  cardMatchSound: CardMatch
+  cardMismatchSound: CardMismatch
+  gameOverSound: GameOver
+--- !u!114 &100817639
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 100817637}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 39bfc963695ed154a8e03f9d965af51d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  soundEffects:
+  - name: CardFlip
+    clip: {fileID: 8300000, guid: 8346013f972194841b9acabdf53f5734, type: 3}
+    volume: 0.6
+    pitch: 1
+  - name: CardMatch
+    clip: {fileID: 8300000, guid: 0a339a99f136eed44a8a5e929b0077c8, type: 3}
+    volume: 1
+    pitch: 1
+  - name: CardMismatch
+    clip: {fileID: 8300000, guid: 0a339a99f136eed44a8a5e929b0077c8, type: 3}
+    volume: 0.7
+    pitch: 0.9
+  - name: GameOver
+    clip: {fileID: 8300000, guid: 6939f7fc46c62bc4c8ae48134c56bc8e, type: 3}
+    volume: 1
+    pitch: 1
+  - name: BackgroundMusic
+    clip: {fileID: 8300000, guid: 115f106238bbe0340a3e33a97545df99, type: 3}
+    volume: 1
+    pitch: 1
+  masterVolume: 1
+--- !u!4 &100817640
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 100817637}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &194453359
 GameObject:
   m_ObjectHideFlags: 0
@@ -687,6 +770,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4f701f6584ee91640b67dc7c44c34276, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  pointsPerMatch: 10
+  pointsPerMismatch: -2
 --- !u!4 &914532673
 Transform:
   m_ObjectHideFlags: 0
@@ -1205,6 +1290,7 @@ MonoBehaviour:
   revealTime: 0.5
   previewTime: 0.5
   matchDelay: 1
+  loadSaveGameOnStart: 1
 --- !u!4 &1332212516
 Transform:
   m_ObjectHideFlags: 0
@@ -1622,6 +1708,50 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!1 &2006216337
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2006216339}
+  - component: {fileID: 2006216338}
+  m_Layer: 0
+  m_Name: savemanager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &2006216338
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2006216337}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9541ecf9880075649b7f657140dc8b30, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!4 &2006216339
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2006216337}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -1632,3 +1762,5 @@ SceneRoots:
   - {fileID: 45548084}
   - {fileID: 1332212516}
   - {fileID: 914532673}
+  - {fileID: 2006216339}
+  - {fileID: 100817640}

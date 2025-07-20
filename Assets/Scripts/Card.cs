@@ -12,8 +12,9 @@ public class Card : MonoBehaviour
     private bool isRevealed = false;
     private int shapeId = -1;
     private GameManager gameManager;
-    private bool isInteractable = true;
+    private bool isInteractable = false;
     private bool isDestroyed = false;
+    private GameAudio gameAudio;
 
     private void Awake()
     {
@@ -21,10 +22,12 @@ public class Card : MonoBehaviour
         if (frontSprite == null) frontSprite = transform.GetComponent<SpriteRenderer>();
         if (backSprite == null) backSprite = transform.GetComponent<SpriteRenderer>();
         if (animationController == null) animationController = GetComponent<CardAnimationController>();
-        if (frontSprite == null || backSprite == null || animationController == null)
+        
+        gameAudio = FindObjectOfType<GameAudio>();
+        
+        if (frontSprite == null || backSprite == null || animationController == null || gameAudio == null)
         {
-            Debug.LogError("Card: Missing required components! Please check the card prefab.");
-            enabled = false;
+             enabled = false;
             return;
         }
     }
@@ -34,19 +37,20 @@ public class Card : MonoBehaviour
         gameManager = FindObjectOfType<GameManager>();
         if (gameManager == null)
         {
-            Debug.LogError("Card: GameManager not found in scene!");
-            enabled = false;
+              enabled = false;
             return;
         }
     }
 
     private void OnMouseDown()
     {
-        if (isInteractable && !isDestroyed && !animationController.IsAnimating && gameManager != null)
+        if (!enabled) return; 
+
+        if (!isInteractable || isDestroyed || animationController.IsAnimating || gameManager == null)
         {
-            animationController.PlayClickAnimation();
-            gameManager.OnCardClicked(this);
+             return;
         }
+        gameManager.OnCardClicked(this);
     }
 
     public int ShapeId => shapeId;
@@ -54,56 +58,89 @@ public class Card : MonoBehaviour
 
     public void SetCard(Sprite shape, int id)
     {
+        if (!enabled) return;
+
         frontSprite.sprite = shape;
         shapeId = id;
         isDestroyed = false;
-        HideAfterDelay();
+        isInteractable = false;
+        frontSprite.gameObject.SetActive(false);
+        backSprite.gameObject.SetActive(true);
+        
         ShowPreview();
     }
 
     private void ShowPreview()
     {
-        isInteractable = false;
-        animationController.PlayPreviewAnimation(() => StartCoroutine(HideAfterDelay()));
-    }
-
-    private IEnumerator HideAfterDelay()
-    {
-        yield return new WaitForSeconds(0f);
-        if (!isDestroyed)
-        {
+        if (!enabled) return;
+         isRevealed = true;
+        frontSprite.gameObject.SetActive(true);
+        backSprite.gameObject.SetActive(false);
+        
+        animationController.PlayPreviewAnimation(() => {
+            
             HideCard();
-        }
+            isInteractable = true;
+        });
     }
 
     public void RevealCard()
     {
-        if (isDestroyed || animationController.IsAnimating) return;
+        if (!enabled || isDestroyed || animationController.IsAnimating) return;        Debug.Log($"Revealing card {gameObject.name} (ID: {shapeId})");
         isRevealed = true;
-        animationController.FlipToFront();
+        isInteractable = false;
+        
+        frontSprite.gameObject.SetActive(true);
+        backSprite.gameObject.SetActive(true);
+        
+        gameAudio.PlayCardFlip();
+        animationController.FlipToFront(() => {
+            backSprite.gameObject.SetActive(false);
+            isInteractable = true;
+        });
     }
 
     public void HideCard()
     {
-        if (isDestroyed || animationController.IsAnimating) return;
+        if (!enabled || isDestroyed || animationController.IsAnimating) return;
+
+     
         isRevealed = false;
-        animationController.FlipToBack(() => isInteractable = true);
+        isInteractable = false;
+        
+        frontSprite.gameObject.SetActive(true);
+        backSprite.gameObject.SetActive(true);
+        
+        gameAudio.PlayCardFlip();
+        animationController.FlipToBack(() => {
+            frontSprite.gameObject.SetActive(false);
+            isInteractable = true;
+        });
     }
 
     public void PlayMatchAnimation()
     {
+        if (!enabled || isDestroyed) return;
+        gameAudio.PlayCardMatch();
         animationController.PlayMatchAnimation(() => DisableCard());
     }
 
     public void DisableCard()
     {
+        if (!enabled) return;
+
         isDestroyed = true;
         isInteractable = false;
+        
         if (cardCollider != null)
         {
             cardCollider.enabled = false;
         }
-        animationController.PlayDestroyAnimation();
+        
+        animationController.PlayDestroyAnimation(() => {
+           
+            Destroy(gameObject);
+        });
     }
 
     private void OnDisable()

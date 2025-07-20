@@ -100,6 +100,9 @@ MonoBehaviour:
   matchAnimDuration: 0.2
   destroyDuration: 0.3
   previewDuration: 0.4
+  pulseColor: {r: 0, g: 1, b: 0.8, a: 1}
+  pulseIntensity: 1.5
+  pulseCount: 10
 --- !u!114 &6970192357789317054
 MonoBehaviour:
   m_ObjectHideFlags: 0

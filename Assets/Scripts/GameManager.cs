@@ -8,149 +8,177 @@ public class GameManager : MonoBehaviour
     [SerializeField] private Sprite[] shapeSprites;
     [SerializeField] private float revealTime = 0.5f;
     [SerializeField] private float previewTime = 2f;
-    [SerializeField] private float matchDelay = 1f;
+    [SerializeField] private float matchDelay = 0.5f; 
+    [SerializeField] private bool loadSaveGameOnStart = true;
 
     private enum GameState
     {
         Preview,
-        WaitingForFirst,
-        WaitingForSecond,
-        Processing,
+        Playing,
         GameOver
     }
 
     private GameState currentState;
-    private Card firstCard;
-    private Card secondCard;
+    private List<Card> selectedCards = new List<Card>();
+    private HashSet<Card> processingCards = new HashSet<Card>();
     private int matchesFound = 0;
     private int totalPairs;
-    private bool isProcessing = false;
+    private GameAudio gameAudio;
+
+    private void Awake()
+    {
+        gameAudio = FindObjectOfType<GameAudio>();
+        if (gameAudio == null)
+        {
+            enabled = false;
+            return;
+        }
+    }
 
     private void Start()
     {
-        currentState = GameState.Preview;
-       // StartCoroutine(StartGameAfterPreview());
+        if (loadSaveGameOnStart && GameSaveManager.Instance.HasSaveGame)
+        {
+            LoadGame();
+        }
+        else
+        {
+            currentState = GameState.Playing;
+        }
     }
 
-    public IEnumerator StartGameAfterPreview()
+    private void LoadGame()
     {
-        yield return new WaitForSeconds(previewTime);
-        currentState = GameState.WaitingForFirst;
+        var (score, matches, attempts, bestScore) = GameSaveManager.Instance.LoadGameProgress();
+        matchesFound = matches;
+        ScoreHandler.Instance.RestoreState(score, attempts);   
+        if (matchesFound >= totalPairs)
+        {
+            currentState = GameState.GameOver;
+        }
+        else
+        {
+            currentState = GameState.Playing;
+        }
+    }
+
+    private void SaveGame()
+    {
+        if (currentState != GameState.Preview)
+        {
+            GameSaveManager.Instance.SaveGameProgress(
+                ScoreHandler.Instance.CurrentScore,
+                matchesFound,
+                ScoreHandler.Instance.TotalAttempts
+            );
+        }
+    }
+
+    private void OnApplicationPause(bool pauseStatus)
+    {
+        if (pauseStatus)
+        {
+            SaveGame();
+        }
+    }
+
+    private void OnApplicationQuit()
+    {
+        SaveGame();
     }
 
     public void OnCardClicked(Card clickedCard)
     {
-        // Prevent any clicks during processing
-        if (isProcessing || currentState == GameState.Preview || currentState == GameState.GameOver)
+        if (currentState == GameState.Preview || currentState == GameState.GameOver)
         {
-            Debug.Log($"Card click ignored - State: {currentState}, Processing: {isProcessing}");
             return;
         }
-
-        // Prevent clicking already revealed cards
+        if (processingCards.Contains(clickedCard))
+        {
+            return;
+        }
         if (clickedCard.IsRevealed)
         {
-            Debug.Log("Card already revealed - click ignored");
             return;
         }
-
-        // Prevent clicking the same card
-        if (clickedCard == firstCard)
-        {
-            Debug.Log("Same card clicked - ignored");
-            return;
-        }
-
-        Debug.Log($"Card clicked - ShapeID: {clickedCard.ShapeId}");
         clickedCard.RevealCard();
-
-        if (firstCard == null)
+        selectedCards.Add(clickedCard);
+        if (selectedCards.Count == 2)
         {
-            // First card selection
-            firstCard = clickedCard;
-            currentState = GameState.WaitingForSecond;
-            Debug.Log($"First card selected - ShapeID: {firstCard.ShapeId}");
-        }
-        else
-        {
-            // Second card selection
-            secondCard = clickedCard;
-            Debug.Log($"Second card selected - ShapeID: {secondCard.ShapeId}");
-            StartCoroutine(ProcessMatch());
+            StartCoroutine(ProcessMatchAsync(selectedCards[0], selectedCards[1]));
+            selectedCards.Clear();
         }
     }
 
-    private IEnumerator ProcessMatch()
+    private IEnumerator ProcessMatchAsync(Card firstCard, Card secondCard)
     {
-        isProcessing = true;
-        currentState = GameState.Processing;
-        Debug.Log("Processing match...");
-
-        // Wait for cards to be fully revealed
+        processingCards.Add(firstCard);
+        processingCards.Add(secondCard);
         yield return new WaitForSeconds(matchDelay);
 
         bool isMatch = false;
-
-        // Verify both cards still exist and have the same ShapeId
         if (firstCard != null && secondCard != null)
         {
             isMatch = firstCard.ShapeId == secondCard.ShapeId;
-            Debug.Log($"Match check - First card ID: {firstCard.ShapeId}, Second card ID: {secondCard.ShapeId}, Is Match: {isMatch}");
-        }
+             }
 
-        // Update score before processing the match result
+       
         ScoreHandler.Instance.ProcessMatchAttempt(isMatch);
 
         if (isMatch)
         {
-            Debug.Log("Match found! Destroying cards...");
             matchesFound++;
 
-            // Store references before destroying
-            Card card1 = firstCard;
-            Card card2 = secondCard;
-
-            // Clear references first
-            firstCard = null;
-            secondCard = null;
-
-            // Destroy the matched cards
-            Destroy(card1.gameObject);
-            Destroy(card2.gameObject);
+            // Play match animations
+            firstCard.PlayMatchAnimation();
+            secondCard.PlayMatchAnimation();
 
             if (matchesFound == totalPairs)
             {
-                Debug.Log("Game Over - All matches found!");
                 currentState = GameState.GameOver;
-            }
-            else
-            {
-                currentState = GameState.WaitingForFirst;
+                gameAudio.PlayGameOver(); 
+                SaveGame();
             }
         }
         else
         {
-            Debug.Log("No match - hiding cards");
-            // Hide both cards
-            if (firstCard != null) firstCard.HideCard();
-            if (secondCard != null) secondCard.HideCard();
-
-            // Clear references
-            firstCard = null;
-            secondCard = null;
-            currentState = GameState.WaitingForFirst;
+            gameAudio.PlayCardMismatch();
+            StartCoroutine(HideCardsDelayed(firstCard, secondCard));
         }
+        processingCards.Remove(firstCard);
+        processingCards.Remove(secondCard);
+        SaveGame();
+    }
 
-        isProcessing = false;
+    private IEnumerator HideCardsDelayed(Card firstCard, Card secondCard)
+    {
+        yield return new WaitForSeconds(matchDelay);
+        
+        if (firstCard != null) firstCard.HideCard();
+        if (secondCard != null) secondCard.HideCard();
     }
 
     public void SetTotalPairs(int pairs)
     {
         totalPairs = pairs;
         matchesFound = 0;
+        selectedCards.Clear();
+        processingCards.Clear();
         currentState = GameState.Preview;
-        ScoreHandler.Instance.ResetScore(); // Reset score when starting new game
-        Debug.Log($"Game initialized with {pairs} pairs");
+        ScoreHandler.Instance.ResetScore();
+        StartCoroutine(StartGameAfterPreview());
+    }
+
+    public IEnumerator StartGameAfterPreview()
+    {
+         yield return new WaitForSeconds(previewTime);
+        currentState = GameState.Playing;
+    }
+
+    public void RestartGame()
+    {
+        GameSaveManager.Instance.ClearSaveGame();
+        SetTotalPairs(totalPairs);
     }
 
     public class ShapeData
@@ -167,20 +195,15 @@ public class GameManager : MonoBehaviour
 
     public Sprite[] GetRandomizedShapePairs(int pairCount)
     {
-        // Create a list to hold our pairs with their IDs
         List<ShapeData> shapePairs = new List<ShapeData>();
-        
-        // Create pairs ensuring same sprites get same IDs
         for (int i = 0; i < pairCount; i++)
         {
             int spriteIndex = i % shapeSprites.Length;
-            // Both cards of the pair get the spriteIndex as their ID
             shapePairs.Add(new ShapeData(shapeSprites[spriteIndex], spriteIndex));
             shapePairs.Add(new ShapeData(shapeSprites[spriteIndex], spriteIndex));
-            Debug.Log($"Created pair with sprite {shapeSprites[spriteIndex].name} and ID {spriteIndex}");
-        }
+         }
 
-        // Shuffle the pairs
+      
         for (int i = shapePairs.Count - 1; i > 0; i--)
         {
             int randomIndex = Random.Range(0, i + 1);
@@ -189,15 +212,12 @@ public class GameManager : MonoBehaviour
             shapePairs[randomIndex] = temp;
         }
 
-        // Convert to sprite array while maintaining the shape IDs
         Sprite[] randomizedSprites = new Sprite[shapePairs.Count];
         for (int i = 0; i < shapePairs.Count; i++)
         {
             randomizedSprites[i] = shapePairs[i].sprite;
-            Debug.Log($"Position {i}: Sprite {shapePairs[i].sprite.name} with ID {shapePairs[i].shapeId}");
-        }
-
-        // Store the shape IDs for the cards to use
+            
+         }
         cardShapeIds = new int[shapePairs.Count];
         for (int i = 0; i < shapePairs.Count; i++)
         {
@@ -215,7 +235,6 @@ public class GameManager : MonoBehaviour
         {
             return cardShapeIds[cardIndex];
         }
-        Debug.LogError($"Invalid card index: {cardIndex}");
         return -1;
     }
 } 
