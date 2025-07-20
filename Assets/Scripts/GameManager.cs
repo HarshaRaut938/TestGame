@@ -8,8 +8,11 @@ public class GameManager : MonoBehaviour
     [SerializeField] private Sprite[] shapeSprites;
     [SerializeField] private float revealTime = 0.5f;
     [SerializeField] private float previewTime = 2f;
-    [SerializeField] private float matchDelay = 0.5f; 
+    [SerializeField] private float matchDelay = 0.5f;
     [SerializeField] private bool loadSaveGameOnStart = true;
+
+    [Header("UI References")]
+    [SerializeField] private GameObject gameOverPanel;
 
     private enum GameState
     {
@@ -24,6 +27,7 @@ public class GameManager : MonoBehaviour
     private int matchesFound = 0;
     private int totalPairs;
     private GameAudio gameAudio;
+    private int activeAnimations = 0;
 
     private void Awake()
     {
@@ -32,6 +36,11 @@ public class GameManager : MonoBehaviour
         {
             enabled = false;
             return;
+        }
+
+        if (gameOverPanel != null)
+        {
+            gameOverPanel.SetActive(false);
         }
     }
 
@@ -51,7 +60,7 @@ public class GameManager : MonoBehaviour
     {
         var (score, matches, attempts, bestScore) = GameSaveManager.Instance.LoadGameProgress();
         matchesFound = matches;
-        ScoreHandler.Instance.RestoreState(score, attempts);   
+        ScoreHandler.Instance.RestoreState(score, attempts);
         if (matchesFound >= totalPairs)
         {
             currentState = GameState.GameOver;
@@ -114,30 +123,30 @@ public class GameManager : MonoBehaviour
     {
         processingCards.Add(firstCard);
         processingCards.Add(secondCard);
+
         yield return new WaitForSeconds(matchDelay);
 
         bool isMatch = false;
+
         if (firstCard != null && secondCard != null)
         {
             isMatch = firstCard.ShapeId == secondCard.ShapeId;
-             }
+        }
 
-       
         ScoreHandler.Instance.ProcessMatchAttempt(isMatch);
 
         if (isMatch)
         {
             matchesFound++;
+            activeAnimations += 2; // Two cards will play match animation
 
-            // Play match animations
             firstCard.PlayMatchAnimation();
             secondCard.PlayMatchAnimation();
 
             if (matchesFound == totalPairs)
             {
                 currentState = GameState.GameOver;
-                gameAudio.PlayGameOver(); 
-                SaveGame();
+                StartCoroutine(ShowGameOverWhenAnimationsComplete());
             }
         }
         else
@@ -145,15 +154,40 @@ public class GameManager : MonoBehaviour
             gameAudio.PlayCardMismatch();
             StartCoroutine(HideCardsDelayed(firstCard, secondCard));
         }
+
         processingCards.Remove(firstCard);
         processingCards.Remove(secondCard);
+
         SaveGame();
+    }
+
+    private IEnumerator ShowGameOverWhenAnimationsComplete()
+    {
+        // Wait for all card animations to complete
+        while (activeAnimations > 0)
+        {
+            yield return new WaitForSeconds(0.1f);
+        }
+
+        // Play game over sound
+        gameAudio.PlayGameOver();
+
+        // Show game over panel
+        if (gameOverPanel != null)
+        {
+            gameOverPanel.SetActive(true);
+        }
+    }
+
+    public void OnCardAnimationComplete()
+    {
+        activeAnimations = Mathf.Max(0, activeAnimations - 1);
     }
 
     private IEnumerator HideCardsDelayed(Card firstCard, Card secondCard)
     {
         yield return new WaitForSeconds(matchDelay);
-        
+
         if (firstCard != null) firstCard.HideCard();
         if (secondCard != null) secondCard.HideCard();
     }
@@ -177,6 +211,10 @@ public class GameManager : MonoBehaviour
 
     public void RestartGame()
     {
+        if (gameOverPanel != null)
+        {
+            gameOverPanel.SetActive(false);
+        }
         GameSaveManager.Instance.ClearSaveGame();
         SetTotalPairs(totalPairs);
     }
@@ -203,7 +241,7 @@ public class GameManager : MonoBehaviour
             shapePairs.Add(new ShapeData(shapeSprites[spriteIndex], spriteIndex));
          }
 
-      
+
         for (int i = shapePairs.Count - 1; i > 0; i--)
         {
             int randomIndex = Random.Range(0, i + 1);
@@ -216,7 +254,7 @@ public class GameManager : MonoBehaviour
         for (int i = 0; i < shapePairs.Count; i++)
         {
             randomizedSprites[i] = shapePairs[i].sprite;
-            
+
          }
         cardShapeIds = new int[shapePairs.Count];
         for (int i = 0; i < shapePairs.Count; i++)

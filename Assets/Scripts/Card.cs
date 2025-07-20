@@ -27,7 +27,7 @@ public class Card : MonoBehaviour
         
         if (frontSprite == null || backSprite == null || animationController == null || gameAudio == null)
         {
-             enabled = false;
+            enabled = false;
             return;
         }
     }
@@ -37,18 +37,18 @@ public class Card : MonoBehaviour
         gameManager = FindObjectOfType<GameManager>();
         if (gameManager == null)
         {
-              enabled = false;
+            enabled = false;
             return;
         }
     }
 
     private void OnMouseDown()
     {
-        if (!enabled) return; 
+        if (!enabled) return;
 
         if (!isInteractable || isDestroyed || animationController.IsAnimating || gameManager == null)
         {
-             return;
+            return;
         }
         gameManager.OnCardClicked(this);
     }
@@ -73,12 +73,11 @@ public class Card : MonoBehaviour
     private void ShowPreview()
     {
         if (!enabled) return;
-         isRevealed = true;
+        isRevealed = true;
         frontSprite.gameObject.SetActive(true);
         backSprite.gameObject.SetActive(false);
         
         animationController.PlayPreviewAnimation(() => {
-            
             HideCard();
             isInteractable = true;
         });
@@ -86,7 +85,7 @@ public class Card : MonoBehaviour
 
     public void RevealCard()
     {
-        if (!enabled || isDestroyed || animationController.IsAnimating) return;        Debug.Log($"Revealing card {gameObject.name} (ID: {shapeId})");
+        if (!enabled || isDestroyed || animationController.IsAnimating) return;
         isRevealed = true;
         isInteractable = false;
         
@@ -103,8 +102,6 @@ public class Card : MonoBehaviour
     public void HideCard()
     {
         if (!enabled || isDestroyed || animationController.IsAnimating) return;
-
-     
         isRevealed = false;
         isInteractable = false;
         
@@ -122,7 +119,13 @@ public class Card : MonoBehaviour
     {
         if (!enabled || isDestroyed) return;
         gameAudio.PlayCardMatch();
-        animationController.PlayMatchAnimation(() => DisableCard());
+        animationController.PlayMatchAnimation(() => {
+            DisableCard();
+            if (gameManager != null)
+            {
+                gameManager.OnCardAnimationComplete();
+            }
+        });
     }
 
     public void DisableCard()
@@ -138,7 +141,6 @@ public class Card : MonoBehaviour
         }
         
         animationController.PlayDestroyAnimation(() => {
-           
             Destroy(gameObject);
         });
     }
